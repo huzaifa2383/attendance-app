@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#2ecc71">
+<title>Madrasa Attendance Pro</title>
+<link rel="manifest" href="manifest.json">
+
+<style>
+
+:root{
+  --bg:#f4f4f4;
+  --card:#ffffff;
+  --text:#1c1c1c;
+  --muted:#666;
+  --border:#dcdcdc;
+  --th:#34495e;
+  --th-text:#ffffff;
+  --green:#2ecc71;
+  --red:#e74c3c;
+  --dark:#34495e;
+  --orange:#f39c12;
+  --blue:#3498db;
+  --input-bg:#ffffff;
+  --shadow:rgba(0,0,0,0.1);
+}
+
+[data-theme="dark"]{
+  --bg:#121417;
+  --card:#1c1f24;
+  --text:#eaeaea;
+  --muted:#aaa;
+  --border:#333;
+  --th:#0f6f9e;
+  --th-text:#ffffff;
+  --input-bg:#22262b;
+  --shadow:rgba(0,0,0,0.5);
+}
+
+*{box-sizing:border-box;}
+
+body{
+  font-family:Arial, Helvetica, sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  margin:0;
+  padding:15px;
+  transition:background .2s, color .2s;
+}
+
+.topbar{
+  max-width:1100px;
+  margin:0 auto 10px auto;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.topbar h1{
+  font-size:20px;
+  margin:0;
+}
+
+.iconbtn{
+  border:1px solid var(--border);
+  background:var(--card);
+  color:var(--text);
+  padding:8px 12px;
+  border-radius:8px;
+  cursor:pointer;
+  font-size:16px;
+}
+
+.card{
+  background:var(--card);
+  max-width:1100px;
+  margin:auto;
+  margin-top:16px;
+  padding:20px;
+  border-radius:12px;
+  box-shadow:0 2px 12px var(--shadow);
+}
+
+h2,h3{
+  text-align:center;
+  margin-top:0;
+}
+
+label{
+  font-size:13px;
+  color:var(--muted);
+  display:block;
+  margin:8px 4px 0 4px;
+}
+
+input,select{
+  width:90%;
+  padding:12px;
+  margin:8px;
+  border-radius:8px;
+  border:1px solid var(--border);
+  font-size:15px;
+  background:var(--input-bg);
+  color:var(--text);
+}
+
+input[type="checkbox"]{width:auto;}
+
+button{
+  padding:10px 15px;
+  margin:5px;
+  border:none;
+  border-radius:8px;
+  font-weight:bold;
+  cursor:pointer;
+  font-size:14px;
+}
+
+button:disabled{opacity:.6;cursor:not-allowed;}
+
+.green{background:var(--green);color:white;}
+.red{background:var(--red);color:white;}
+.dark{background:var(--dark);color:white;}
+.orange{background:var(--orange);color:white;}
+.blue{background:var(--blue);color:white;}
+.ghost{background:transparent;color:var(--text);border:1px solid var(--border);}
+.tab-btn.active{outline:3px solid rgba(0,0,0,0.15);}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:15px;
+  font-size:13px;
+}
+
+th,td{
+  border:1px solid var(--border);
+  padding:8px;
+  text-align:center;
+}
+
+th{
+  background:var(--th);
+  color:var(--th-text);
+}
+
+.success{background:#d4edda;color:#155724;padding:10px;border-radius:8px;margin-top:10px;}
+.error{background:#f8d7da;color:#721c24;padding:10px;border-radius:8px;margin-top:10px;}
+
+.dashboard{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:12px;
+  margin-top:10px;
+}
+
+.stat{
+  border-radius:12px;
+  padding:16px 10px;
+  text-align:center;
+  color:white;
+}
+
+.stat .num{font-size:28px;font-weight:bold;display:block;}
+.stat .lbl{font-size:12px;opacity:.9;}
+
+.tabs{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  justify-content:center;
+  margin-bottom:10px;
+}
+
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+.rangebar{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:6px;
+  margin:10px 0;
+}
+
+.rangebar button.active{
+  outline:2px solid var(--th);
+}
+
+.modal-overlay{
+  display:none;
+  position:fixed;
+  top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.5);
+  z-index:999;
+  align-items:center;
+  justify-content:center;
+  padding:15px;
+}
+
+.modal-overlay.show{display:flex;}
+
+.modal-box{
+  background:var(--card);
+  border-radius:12px;
+  padding:20px;
+  max-width:420px;
+  width:100%;
+  max-height:90vh;
+  overflow-y:auto;
+}
+
+.teacher-row{
+  display:flex;
+  gap:6px;
+  align-items:center;
+  flex-wrap:wrap;
+  border-bottom:1px solid var(--border);
+  padding:6px 0;
+}
+
+.teacher-row input{width:auto;flex:1;min-width:100px;}
+
+.calendar-grid{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:4px;
+  margin-top:10px;
+}
+
+.cal-cell{
+  border-radius:8px;
+  padding:8px 2px;
+  text-align:center;
+  font-size:12px;
+  color:white;
+  min-height:36px;
+}
+
+.cal-head{
+  font-weight:bold;
+  background:transparent;
+  color:var(--text);
+}
+
+.cal-present{background:var(--green);}
+.cal-late{background:var(--orange);}
+.cal-absent{background:var(--red);}
+.cal-holiday{background:var(--blue);}
+.cal-empty{background:transparent;}
+.cal-none{background:var(--border);color:var(--muted);}
+
+.chart-wrap{max-width:100%;margin-top:15px;}
+
+.hidden{display:none !important;}
+
+@media(max-width:600px){
+  .topbar h1{font-size:16px;}
+}
+
+</style>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
+</head>
+
+<body>
+
+<div class="topbar">
+  <h1>📍 Madrasa Attendance Pro</h1>
+  <button class="iconbtn" id="btnTheme" title="Toggle dark mode">🌙</button>
+</div>
+
+<!-- CHECK IN CARD -->
+<div class="card">
+  <h2>Teacher Check In</h2>
+  <select id="name"></select>
+  <input type="password" id="pin" placeholder="Enter PIN">
+  <br>
+  <button class="green" id="btnIn">Check In</button>
+  <div id="status"></div>
+</div>
+
+<!-- ADMIN LOGIN -->
+<div class="card" id="adminLoginCard">
+  <h3>🔐 Admin Panel</h3>
+  <input type="password" id="adminPin" placeholder="Admin PIN">
+  <br>
+  <button class="dark" id="btnAdminLogin">Login</button>
+  <div id="adminLoginStatus"></div>
+</div>
+
+<!-- ADMIN CONTENT (hidden until login) -->
+<div id="adminContent" class="hidden">
+
+  <div class="card">
+    <div class="tabs">
+      <button class="dark tab-btn active" data-tab="tab-dashboard">Dashboard</button>
+      <button class="dark tab-btn" data-tab="tab-view">View</button>
+      <button class="dark tab-btn" data-tab="tab-reports">Reports</button>
+      <button class="dark tab-btn" data-tab="tab-calendar">Calendar</button>
+      <button class="dark tab-btn" data-tab="tab-graphs">Graphs</button>
+      <button class="dark tab-btn" data-tab="tab-holidays">Holidays</button>
+      <button class="dark tab-btn" data-tab="tab-settings">Settings</button>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="card tab-panel active" id="tab-dashboard">
+    <h3>📊 Today's Dashboard</h3>
+    <div class="dashboard">
+      <div class="stat" style="background:var(--green)"><span class="num" id="dashPresent">0</span><span class="lbl">Present Today</span></div>
+      <div class="stat" style="background:var(--orange)"><span class="num" id="dashLate">0</span><span class="lbl">Late Today</span></div>
+      <div class="stat" style="background:var(--red)"><span class="num" id="dashAbsent">0</span><span class="lbl">Absent Today</span></div>
+      <div class="stat" style="background:var(--dark)"><span class="num" id="dashTotal">0</span><span class="lbl">Total Teachers</span></div>
+    </div>
+    <div style="text-align:center;margin-top:10px;">
+      <button class="blue" id="btnRefreshDash">Refresh</button>
+      <button class="red" id="btnMarkAbsent">Mark Absent</button>
+    </div>
+  </div>
+
+  <!-- VIEW -->
+  <div class="card tab-panel" id="tab-view">
+    <h3>📋 Attendance Records</h3>
+    <input type="text" id="searchName" placeholder="🔍 Search by teacher name">
+    <select id="filterStatus">
+      <option value="All">All Status</option>
+      <option value="Present">Present</option>
+      <option value="Late">Late</option>
+      <option value="Absent">Absent</option>
+    </select>
+    <div class="rangebar">
+      <button class="dark range-btn active" data-range="today">Today</button>
+      <button class="dark range-btn" data-range="week">This Week</button>
+      <button class="dark range-btn" data-range="month">This Month</button>
+      <button class="dark range-btn" data-range="all">All Records</button>
+    </div>
+    <div style="text-align:center;">
+      <button class="blue" id="btnLoadRecords">Load / Refresh</button>
+      <button class="orange" id="btnCSV">Export CSV</button>
+    </div>
+    <table id="table"></table>
+  </div>
+
+  <!-- REPORTS -->
+  <div class="card tab-panel" id="tab-reports">
+    <h3>🗓️ Weekly Report (last 7 days)</h3>
+    <div style="text-align:center;"><button class="blue" id="btnWeekly">Generate</button></div>
+    <table id="weeklyTable"></table>
+
+    <h3>📆 Monthly Summary</h3>
+    <div style="text-align:center;"><button class="blue" id="btnMonthly">Generate</button></div>
+    <table id="monthlyTable"></table>
+
+    <h3>🧾 Custom Report</h3>
+    <label>From Date</label>
+    <input type="date" id="customFrom">
+    <label>To Date</label>
+    <input type="date" id="customTo">
+    <div style="text-align:center;"><button class="blue" id="btnCustom">Generate Report</button></div>
+    <table id="customTable"></table>
+  </div>
+
+  <!-- CALENDAR -->
+  <div class="card tab-panel" id="tab-calendar">
+    <h3>📅 Calendar View</h3>
+    <select id="calTeacher"></select>
+    <input type="month" id="calMonth">
+    <div style="text-align:center;"><button class="blue" id="btnCalendar">Show</button></div>
+    <div class="calendar-grid" id="calendarGrid"></div>
+    <p style="font-size:12px;color:var(--muted);text-align:center;">
+      🟩 Present &nbsp; 🟧 Late &nbsp; 🟥 Absent &nbsp; 🟦 Holiday &nbsp; ⬜ No record
+    </p>
+  </div>
+
+  <!-- GRAPHS -->
+  <div class="card tab-panel" id="tab-graphs">
+    <h3>📈 Attendance Graphs</h3>
+    <div style="text-align:center;"><button class="blue" id="btnGraphs">Generate Graphs</button></div>
+    <div class="chart-wrap"><canvas id="weeklyChart" height="220"></canvas></div>
+    <div class="chart-wrap"><canvas id="monthlyChart" height="220"></canvas></div>
+  </div>
+
+  <!-- HOLIDAYS -->
+  <div class="card tab-panel" id="tab-holidays">
+    <h3>🌙 Holidays</h3>
+    <label>Holiday Name</label>
+    <input type="text" id="holidayName" placeholder="e.g. Eid ul Fitr">
+    <label>Date</label>
+    <input type="date" id="holidayDate">
+    <div style="text-align:center;"><button class="orange" id="btnAddHoliday">Add Holiday</button></div>
+    <div id="holidayView"></div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="card tab-panel" id="tab-settings">
+    <h3>⚙️ Settings</h3>
+
+    <label>Admin PIN</label>
+    <input type="text" id="setAdminPin">
+
+    <label>Attendance Radius (meters)</label>
+    <input type="number" id="setRadius">
+
+    <label>Late Time Cutoff (after this time = Late)</label>
+    <input type="time" id="setLateTime" step="1">
+
+    <label>GPS Latitude</label>
+    <input type="text" id="setLat">
+
+    <label>GPS Longitude</label>
+    <input type="text" id="setLng">
+
+    <h3>👥 Teacher Management</h3>
+    <div id="teacherList"></div>
+    <div style="text-align:center;">
+      <button class="green" id="btnAddTeacher">+ Add Teacher</button>
+    </div>
+
+    <div style="text-align:center;margin-top:15px;">
+      <button class="dark" id="btnSaveSettings">💾 Save Settings</button>
+    </div>
+    <div id="settingsStatus"></div>
+  </div>
+
+</div>
+
+<!-- EDIT ATTENDANCE MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-box">
+    <h3>Edit Attendance</h3>
+    <label>Teacher</label>
+    <select id="editName"></select>
+    <label>Date</label>
+    <input type="date" id="editDate">
+    <label>Time</label>
+    <input type="time" id="editTime" step="1">
+    <label>Status</label>
+    <select id="editStatus">
+      <option>Present</option>
+      <option>Late</option>
+      <option>Absent</option>
+    </select>
+    <label>Distance (m)</label>
+    <input type="text" id="editDistance">
+    <div style="text-align:center;">
+      <button class="green" id="btnSaveEdit">Save</button>
+      <button class="ghost" id="btnCancelEdit">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+// ==================== FIREBASE (unchanged project) ====================
+
+firebase.initializeApp({
+  apiKey:"AIzaSyAhjNUF0NlZBxG7ujWnY1Xse2h0q6CBBVQ",
+  authDomain:"madrasa-attendance-47e69.firebaseapp.com",
+  projectId:"madrasa-attendance-47e69",
+  storageBucket:"madrasa-attendance-47e69.appspot.com",
+  messagingSenderId:"390959800510",
+  appId:"1:390959800510:web:19a1133e41b55b0ed1beef"
+});
+
+const db = firebase.firestore();
+
+// ==================== DEFAULT SETTINGS (used until Firestore settings doc exists) ====================
+
+const DEFAULT_SETTINGS = {
+  adminPin:"1234",
+  radius:100,
+  lateTime:"17:50:00",
+  lat:18.51278,
+  lng:73.87936,
+  teachers:[
+    {name:"Shk Huzaifa bhai",pin:"1111"},
+    {name:"Shk Khuzaima bhai",pin:"2222"},
+    {name:"Shk Taha bhai",pin:"3333"},
+    {name:"Mulla Mohammad bhai",pin:"4444"},
+    {name:"Farida ben",pin:"5555"},
+    {name:"Arwa ben",pin:"6666"},
+    {name:"Rashida ben",pin:"7777"},
+    {name:"UmmeSalama ben",pin:"8888"}
+  ]
+};
+
+let SETTINGS = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+let isAdmin = false;
+let allRecords = []; // cache of attendance docs {id,...data}
+let allHolidays = []; // cache of holiday docs {id,date,name}
+
+// ==================== HELPERS ====================
+
+function pad(n){return String(n).padStart(2,"0");}
+
+function isoDate(d = new Date()){
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+
+function todayDisplay(){
+  return new Date().toDateString();
+}
+
+function nowTime(){
+  return new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+function recIso(record){
+  // recover an ISO yyyy-mm-dd from the stored display date string
+  let d = new Date(record.date);
+  if(isNaN(d)) return record.date;
+  return isoDate(d);
+}
+
+function show(msg,type){
+  document.getElementById("status").innerHTML = `<div class="${type}">${msg}</div>`;
+  setTimeout(()=>{document.getElementById("status").innerHTML="";},3500);
+}
+
+function showSettingsMsg(msg,type){
+  document.getElementById("settingsStatus").innerHTML = `<div class="${type}">${msg}</div>`;
+  setTimeout(()=>{document.getElementById("settingsStatus").innerHTML="";},3500);
+}
+
+function distance(lat1,lon1,lat2,lon2){
+  let R=6371e3;
+  let p1=lat1*Math.PI/180;
+  let p2=lat2*Math.PI/180;
+  let dp=(lat2-lat1)*Math.PI/180;
+  let dl=(lon2-lon1)*Math.PI/180;
+  let a=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+  return Math.round(R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)));
+}
+
+function attendanceId(name,iso){
+  return `${name}_${iso}`;
+}
+
+function pinFor(name){
+  let t = SETTINGS.teachers.find(t=>t.name===name);
+  return t ? t.pin : null;
+}
+
+function teacherNames(){
+  return SETTINGS.teachers.map(t=>t.name);
+}
+
+// ==================== SETTINGS LOAD / SAVE ====================
+
+async function loadSettings(){
+  try{
+    const ref = db.collection("settings").doc("config");
+    const snap = await ref.get();
+    if(snap.exists){
+      SETTINGS = Object.assign({},DEFAULT_SETTINGS,snap.data());
+      if(!Array.isArray(SETTINGS.teachers) || SETTINGS.teachers.length===0){
+        SETTINGS.teachers = DEFAULT_SETTINGS.teachers;
+      }
+    } else {
+      SETTINGS = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+      await ref.set(SETTINGS);
+    }
+  }catch(e){
+    console.error("Settings load failed, using defaults",e);
+    SETTINGS = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+  }
+  renderTeacherDropdown();
+  populateSettingsForm();
+}
+
+async function saveSettings(){
+  try{
+    await db.collection("settings").doc("config").set(SETTINGS);
+    showSettingsMsg("Settings saved","success");
+    renderTeacherDropdown();
+  }catch(e){
+    showSettingsMsg("Failed to save: "+e.message,"error");
+  }
+}
+
+function populateSettingsForm(){
+  document.getElementById("setAdminPin").value = SETTINGS.adminPin;
+  document.getElementById("setRadius").value = SETTINGS.radius;
+  document.getElementById("setLateTime").value = SETTINGS.lateTime.slice(0,5);
+  document.getElementById("setLat").value = SETTINGS.lat;
+  document.getElementById("setLng").value = SETTINGS.lng;
+  renderTeacherManagement();
+}
+
+function renderTeacherManagement(){
+  let html = "";
+  SETTINGS.teachers.forEach((t,i)=>{
+    html += `
+    <div class="teacher-row">
+      <input type="text" value="${t.name}" data-idx="${i}" data-field="name">
+      <input type="text" value="${t.pin}" data-idx="${i}" data-field="pin" placeholder="PIN">
+      <button class="red" onclick="removeTeacher(${i})">Delete</button>
+    </div>`;
+  });
+  document.getElementById("teacherList").innerHTML = html;
+
+  document.querySelectorAll("#teacherList input").forEach(inp=>{
+    inp.addEventListener("change",(e)=>{
+      let idx = +e.target.dataset.idx;
+      let field = e.target.dataset.field;
+      SETTINGS.teachers[idx][field] = e.target.value.trim();
+    });
+  });
+}
+
+window.removeTeacher = function(idx){
+  if(!confirm("Remove this teacher from the list? Past attendance records are kept.")) return;
+  SETTINGS.teachers.splice(idx,1);
+  renderTeacherManagement();
+};
+
+document.getElementById("btnAddTeacher").addEventListener("click",()=>{
+  SETTINGS.teachers.push({name:"New Teacher",pin:"0000"});
+  renderTeacherManagement();
+});
+
+document.getElementById("btnSaveSettings").addEventListener("click",()=>{
+  SETTINGS.adminPin = document.getElementById("setAdminPin").value.trim() || SETTINGS.adminPin;
+  SETTINGS.radius = parseInt(document.getElementById("setRadius").value) || SETTINGS.radius;
+  let lt = document.getElementById("setLateTime").value; // HH:MM
+  if(lt) SETTINGS.lateTime = lt+":00";
+  SETTINGS.lat = parseFloat(document.getElementById("setLat").value) || SETTINGS.lat;
+  SETTINGS.lng = parseFloat(document.getElementById("setLng").value) || SETTINGS.lng;
+  saveSettings();
+});
+
+// ==================== DROPDOWNS ====================
+
+function renderTeacherDropdown(){
+  const select = document.getElementById("name");
+  select.innerHTML = "";
+  teacherNames().forEach(n=>{
+    let o=document.createElement("option");
+    o.text=n; o.value=n;
+    select.add(o);
+  });
+
+  const calSelect = document.getElementById("calTeacher");
+  calSelect.innerHTML = "";
+  teacherNames().forEach(n=>{
+    let o=document.createElement("option");
+    o.text=n; o.value=n;
+    calSelect.add(o);
+  });
+
+  const editSelect = document.getElementById("editName");
+  editSelect.innerHTML = "";
+  teacherNames().forEach(n=>{
+    let o=document.createElement("option");
+    o.text=n; o.value=n;
+    editSelect.add(o);
+  });
+}
+
+// ==================== HOLIDAYS ====================
+
+async function loadHolidays(){
+  const snap = await db.collection("holidays").orderBy("date").get();
+  allHolidays = [];
+  snap.forEach(doc=>allHolidays.push({id:doc.id,...doc.data()}));
+  return allHolidays;
+}
+
+function holidayForDate(iso){
+  return allHolidays.find(h=>h.date===iso);
+}
+
+async function renderHolidays(){
+  await loadHolidays();
+  if(allHolidays.length===0){
+    document.getElementById("holidayView").innerHTML =
+      `<div style="padding:10px;background:var(--bg);border-radius:8px;margin-top:10px;">No Holidays</div>`;
+    return;
+  }
+  let html = `<table><tr><th>Date</th><th>Name</th><th>Edit</th><th>Delete</th></tr>`;
+  allHolidays.forEach(h=>{
+    html += `<tr>
+      <td>${h.date}</td>
+      <td>${h.name}</td>
+      <td><button class="dark" onclick="editHoliday('${h.id}')">Edit</button></td>
+      <td><button class="red" onclick="deleteHoliday('${h.id}')">Delete</button></td>
+    </tr>`;
+  });
+  html += `</table>`;
+  document.getElementById("holidayView").innerHTML = html;
+}
+
+document.getElementById("btnAddHoliday").addEventListener("click",async()=>{
+  if(!isAdmin) return;
+  const name = document.getElementById("holidayName").value.trim();
+  const date = document.getElementById("holidayDate").value;
+  if(!name || !date){ alert("Enter holiday name and date"); return; }
+  const existing = allHolidays.find(h=>h.date===date);
+  if(existing){ alert("A holiday already exists on this date: "+existing.name); return; }
+  await db.collection("holidays").add({name,date});
+  document.getElementById("holidayName").value="";
+  document.getElementById("holidayDate").value="";
+  renderHolidays();
+});
+
+window.deleteHoliday = async function(id){
+  if(!confirm("Delete this holiday?")) return;
+  await db.collection("holidays").doc(id).delete();
+  renderHolidays();
+};
+
+window.editHoliday = async function(id){
+  const h = allHolidays.find(x=>x.id===id);
+  if(!h) return;
+  const newName = prompt("Holiday name",h.name);
+  if(newName===null) return;
+  const newDate = prompt("Holiday date (YYYY-MM-DD)",h.date);
+  if(newDate===null) return;
+  await db.collection("holidays").doc(id).update({name:newName.trim(),date:newDate.trim()});
+  renderHolidays();
+};
+
+// ==================== CHECK IN ====================
+
+document.getElementById("btnIn").addEventListener("click",()=>{
+
+  let name = document.getElementById("name").value;
+  let pin = document.getElementById("pin").value;
+
+  if(pinFor(name)!==pin){
+    show("Wrong PIN","error");
+    return;
+  }
+
+  const btn = document.getElementById("btnIn");
+  btn.disabled = true;
+
+  navigator.geolocation.getCurrentPosition(async(pos)=>{
+    try{
+      let d = distance(pos.coords.latitude,pos.coords.longitude,SETTINGS.lat,SETTINGS.lng);
+
+      if(d>SETTINGS.radius){
+        show("Outside Area ("+d+"m)","error");
+        return;
+      }
+
+      await loadHolidays();
+      const todayIso = isoDate();
+      const hol = holidayForDate(todayIso);
+      if(hol){
+        show("Today is a holiday: "+hol.name,"error");
+        return;
+      }
+
+      const id = attendanceId(name,todayIso);
+      const ref = db.collection("attendance").doc(id);
+
+      let currentTime = nowTime();
+      const status = currentTime > SETTINGS.lateTime ? "Late" : "Present";
+
+      try{
+        await db.runTransaction(async(tx)=>{
+          const doc = await tx.get(ref);
+          if(doc.exists) throw new Error("DUPLICATE");
+          tx.set(ref,{
+            name:name,
+            date:todayDisplay(),
+            in:currentTime,
+            status:status,
+            distance:d
+          });
+        });
+        show("Checked In ("+status+")","success");
+      }catch(e){
+        if(e.message==="DUPLICATE"){
+          show("Already Checked In","error");
+        } else {
+          show("Error: "+e.message,"error");
+        }
+      }
+    }finally{
+      btn.disabled = false;
+    }
+  },(err)=>{
+    show("Location error: "+err.message,"error");
+    btn.disabled = false;
+  },{enableHighAccuracy:true,timeout:15000});
+
+});
+
+// ==================== ADMIN LOGIN ====================
+
+document.getElementById("btnAdminLogin").addEventListener("click",async()=>{
+  const val = document.getElementById("adminPin").value;
+  if(val!==SETTINGS.adminPin){
+    document.getElementById("adminLoginStatus").innerHTML = `<div class="error">Wrong Admin PIN</div>`;
+    return;
+  }
+  isAdmin = true;
+  document.getElementById("adminLoginStatus").innerHTML = `<div class="success">Logged in</div>`;
+  document.getElementById("adminContent").classList.remove("hidden");
+  await refreshDashboard();
+});
+
+// ==================== TABS ====================
+
+document.querySelectorAll(".tab-btn").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById(btn.dataset.tab).classList.add("active");
+  });
+});
+
+// ==================== LOAD ALL ATTENDANCE (cached) ====================
+
+async function loadAllRecords(){
+  const snap = await db.collection("attendance").get();
+  allRecords = [];
+  snap.forEach(doc=>allRecords.push({id:doc.id,...doc.data()}));
+  allRecords.sort((a,b)=>{
+    let d1 = new Date(a.date+" "+(a.in!=="-"&&a.in?a.in:"00:00:00"));
+    let d2 = new Date(b.date+" "+(b.in!=="-"&&b.in?b.in:"00:00:00"));
+    return d2-d1;
+  });
+  return allRecords;
+}
+
+// ==================== DASHBOARD ====================
+
+async function refreshDashboard(){
+  await loadAllRecords();
+  const todayStr = todayDisplay();
+  const todays = allRecords.filter(r=>r.date===todayStr);
+  const present = todays.filter(r=>r.status==="Present").length;
+  const late = todays.filter(r=>r.status==="Late").length;
+  const absent = todays.filter(r=>r.status==="Absent").length;
+  document.getElementById("dashPresent").textContent = present;
+  document.getElementById("dashLate").textContent = late;
+  document.getElementById("dashAbsent").textContent = absent;
+  document.getElementById("dashTotal").textContent = teacherNames().length;
+}
+
+document.getElementById("btnRefreshDash").addEventListener("click",refreshDashboard);
+
+// ==================== MARK ABSENT ====================
+
+document.getElementById("btnMarkAbsent").addEventListener("click",async()=>{
+  if(!isAdmin) return;
+  const list = teacherNames().map((n,i)=>`${i+1}. ${n}`).join("\n");
+  const choice = prompt("Select Teacher Number:\n\n"+list);
+  if(!choice) return;
+  const index = parseInt(choice)-1;
+  if(index<0 || index>=teacherNames().length){ alert("Invalid Selection"); return; }
+  const name = teacherNames()[index];
+  const todayIso = isoDate();
+  const id = attendanceId(name,todayIso);
+  const ref = db.collection("attendance").doc(id);
+
+  try{
+    await db.runTransaction(async(tx)=>{
+      const doc = await tx.get(ref);
+      if(doc.exists) throw new Error("EXISTS");
+      tx.set(ref,{name:name,date:todayDisplay(),in:"-",status:"Absent",distance:"-"});
+    });
+    alert("❌ "+name+" marked absent");
+    refreshDashboard();
+  }catch(e){
+    if(e.message==="EXISTS") alert("Attendance already exists for "+name+" today");
+    else alert("Error: "+e.message);
+  }
+});
+
+// ==================== VIEW / FILTER / SEARCH ====================
+
+let currentRange = "today";
+
+document.querySelectorAll(".range-btn").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll(".range-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    currentRange = btn.dataset.range;
+    renderTable();
+  });
+});
+
+document.getElementById("searchName").addEventListener("input",renderTable);
+document.getElementById("filterStatus").addEventListener("change",renderTable);
+
+document.getElementById("btnLoadRecords").addEventListener("click",async()=>{
+  await loadAllRecords();
+  renderTable();
+});
+
+function inRange(record){
+  const iso = recIso(record);
+  const today = isoDate();
+  if(currentRange==="all") return true;
+  if(currentRange==="today") return iso===today;
+
+  const recDate = new Date(iso);
+  const now = new Date(today);
+
+  if(currentRange==="week"){
+    const diffDays = Math.floor((now-recDate)/86400000);
+    return diffDays>=0 && diffDays<7;
+  }
+  if(currentRange==="month"){
+    return recDate.getFullYear()===now.getFullYear() && recDate.getMonth()===now.getMonth();
+  }
+  return true;
+}
+
+function renderTable(){
+  const search = document.getElementById("searchName").value.trim().toLowerCase();
+  const statusFilter = document.getElementById("filterStatus").value;
+
+  let rows = allRecords.filter(r=>{
+    if(search && !r.name.toLowerCase().includes(search)) return false;
+    if(statusFilter!=="All" && r.status!==statusFilter) return false;
+    if(!inRange(r)) return false;
+    return true;
+  });
+
+  let html = `<tr><th>Name</th><th>Date</th><th>In</th><th>Status</th><th>Distance</th><th>Actions</th></tr>`;
+  rows.forEach(r=>{
+    html += `<tr>
+      <td>${r.name}</td>
+      <td>${r.date}</td>
+      <td>${r.in}</td>
+      <td>${r.status}</td>
+      <td>${r.distance||"-"}m</td>
+      <td>
+        <button class="dark" onclick="openEdit('${r.id}')">Edit</button>
+        <button class="red" onclick="deleteEntry('${r.id}')">Delete</button>
+      </td>
+    </tr>`;
+  });
+  document.getElementById("table").innerHTML = html;
+}
+
+window.deleteEntry = async(id)=>{
+  if(!confirm("Delete this record?")) return;
+  await db.collection("attendance").doc(id).delete();
+  await loadAllRecords();
+  renderTable();
+  refreshDashboard();
+};
+
+// ==================== EDIT ATTENDANCE MODAL ====================
+
+let editingId = null;
+
+window.openEdit = function(id){
+  const r = allRecords.find(x=>x.id===id);
+  if(!r) return;
+  editingId = id;
+  document.getElementById("editName").value = r.name;
+  document.getElementById("editDate").value = recIso(r);
+  document.getElementById("editTime").value = (r.in && r.in!=="-") ? r.in.slice(0,5) : "";
+  document.getElementById("editStatus").value = r.status;
+  document.getElementById("editDistance").value = r.distance || "";
+  document.getElementById("editModal").classList.add("show");
+};
+
+document.getElementById("btnCancelEdit").addEventListener("click",()=>{
+  document.getElementById("editModal").classList.remove("show");
+  editingId = null;
+});
+
+document.getElementById("btnSaveEdit").addEventListener("click",async()=>{
+  if(!editingId) return;
+  const old = allRecords.find(x=>x.id===editingId);
+  if(!old) return;
+
+  const newName = document.getElementById("editName").value;
+  const newIso = document.getElementById("editDate").value;
+  const newTimeInput = document.getElementById("editTime").value;
+  const newTime = newTimeInput ? newTimeInput+":00" : "-";
+  const newStatus = document.getElementById("editStatus").value;
+  const newDistance = document.getElementById("editDistance").value || "-";
+  const newDisplayDate = new Date(newIso+"T00:00:00").toDateString();
+  const newId = attendanceId(newName,newIso);
+
+  const newData = {name:newName,date:newDisplayDate,in:newTime,status:newStatus,distance:newDistance};
+
+  try{
+    if(newId!==editingId){
+      const destRef = db.collection("attendance").doc(newId);
+      const destSnap = await destRef.get();
+      if(destSnap.exists){
+        alert("An attendance record already exists for "+newName+" on "+newIso);
+        return;
+      }
+      await destRef.set(newData);
+      await db.collection("attendance").doc(editingId).delete();
+    } else {
+      await db.collection("attendance").doc(editingId).update(newData);
+    }
+    document.getElementById("editModal").classList.remove("show");
+    editingId = null;
+    await loadAllRecords();
+    renderTable();
+    refreshDashboard();
+  }catch(e){
+    alert("Error saving: "+e.message);
+  }
+});
+
+// ==================== CSV EXPORT ====================
+
+document.getElementById("btnCSV").addEventListener("click",()=>{
+  let csv = "Name,Date,In,Status,Distance\n";
+  allRecords.forEach(r=>{
+    csv += `${r.name},${r.date},${r.in},${r.status},${r.distance}\n`;
+  });
+  let blob = new Blob([csv],{type:"text/csv"});
+  let a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "attendance.csv";
+  a.click();
+});
+
+// ==================== REPORTS ====================
+
+function buildReportRows(records, startIso, endIso){
+  const start = new Date(startIso);
+  const end = new Date(endIso);
+  const today = new Date(isoDate());
+  const effectiveEnd = end < today ? end : today;
+
+  let workingDays = 0;
+  for(let d=new Date(start); d<=effectiveEnd; d.setDate(d.getDate()+1)){
+    const iso = isoDate(d);
+    if(!holidayForDate(iso)) workingDays++;
+  }
+
+  return teacherNames().map(name=>{
+    const recs = records.filter(r=>r.name===name && recIso(r)>=startIso && recIso(r)<=endIso);
+    const present = new Set(recs.filter(r=>r.status==="Present").map(r=>recIso(r))).size;
+    const late = new Set(recs.filter(r=>r.status==="Late").map(r=>recIso(r))).size;
+    const absent = new Set(recs.filter(r=>r.status==="Absent").map(r=>recIso(r))).size;
+    const pct = workingDays>0 ? (((present+late)/workingDays)*100).toFixed(1)+"%" : "-";
+    return {name,present,late,absent,workingDays,pct};
+  });
+}
+
+function renderReportTable(rows,tableId,showWorkingDays){
+  let html = `<tr><th>Teacher</th><th>Present</th><th>Late</th><th>Absent</th>`;
+  if(showWorkingDays) html += `<th>Working Days</th>`;
+  html += `<th>Attendance %</th></tr>`;
+  rows.forEach(r=>{
+    html += `<tr><td>${r.name}</td><td>${r.present}</td><td>${r.late}</td><td>${r.absent}</td>`;
+    if(showWorkingDays) html += `<td>${r.workingDays}</td>`;
+    html += `<td>${r.pct}</td></tr>`;
+  });
+  document.getElementById(tableId).innerHTML = html;
+}
+
+document.getElementById("btnWeekly").addEventListener("click",async()=>{
+  await loadAllRecords(); await loadHolidays();
+  const end = new Date();
+  const start = new Date(); start.setDate(start.getDate()-6);
+  const rows = buildReportRows(allRecords, isoDate(start), isoDate(end));
+  renderReportTable(rows,"weeklyTable",false);
+});
+
+document.getElementById("btnMonthly").addEventListener("click",async()=>{
+  await loadAllRecords(); await loadHolidays();
+  const now = new Date();
+  const start = new Date(now.getFullYear(),now.getMonth(),1);
+  const end = new Date(now.getFullYear(),now.getMonth()+1,0);
+  const rows = buildReportRows(allRecords, isoDate(start), isoDate(end));
+  renderReportTable(rows,"monthlyTable",true);
+});
+
+document.getElementById("btnCustom").addEventListener("click",async()=>{
+  const from = document.getElementById("customFrom").value;
+  const to = document.getElementById("customTo").value;
+  if(!from || !to){ alert("Select both From and To dates"); return; }
+  await loadAllRecords(); await loadHolidays();
+  const rows = buildReportRows(allRecords, from, to);
+  renderReportTable(rows,"customTable",true);
+});
+
+// ==================== CALENDAR VIEW ====================
+
+document.getElementById("btnCalendar").addEventListener("click",async()=>{
+  await loadAllRecords(); await loadHolidays();
+  const teacher = document.getElementById("calTeacher").value;
+  const monthVal = document.getElementById("calMonth").value; // YYYY-MM
+  if(!monthVal){ alert("Pick a month"); return; }
+  const [y,m] = monthVal.split("-").map(Number);
+  const daysInMonth = new Date(y,m,0).getDate();
+  const firstDay = new Date(y,m-1,1).getDay();
+
+  let html = "";
+  ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].forEach(d=>{
+    html += `<div class="cal-cell cal-head">${d}</div>`;
+  });
+  for(let i=0;i<firstDay;i++){
+    html += `<div class="cal-cell cal-empty"></div>`;
+  }
+  for(let day=1; day<=daysInMonth; day++){
+    const iso = `${y}-${pad(m)}-${pad(day)}`;
+    const hol = holidayForDate(iso);
+    const rec = allRecords.find(r=>r.name===teacher && recIso(r)===iso);
+    let cls = "cal-none";
+    if(hol) cls = "cal-holiday";
+    else if(rec){
+      if(rec.status==="Present") cls="cal-present";
+      else if(rec.status==="Late") cls="cal-late";
+      else if(rec.status==="Absent") cls="cal-absent";
+    }
+    html += `<div class="cal-cell ${cls}" title="${hol?hol.name:(rec?rec.status:'No record')}">${day}</div>`;
+  }
+  document.getElementById("calendarGrid").innerHTML = html;
+});
+
+// ==================== GRAPHS ====================
+
+let weeklyChartInstance = null;
+let monthlyChartInstance = null;
+
+document.getElementById("btnGraphs").addEventListener("click",async()=>{
+  await loadAllRecords();
+
+  // Weekly: last 7 days totals
+  const end = new Date();
+  const labels7 = [];
+  const present7 = [], late7 = [], absent7 = [];
+  for(let i=6;i>=0;i--){
+    const d = new Date(); d.setDate(end.getDate()-i);
+    const iso = isoDate(d);
+    labels7.push(iso.slice(5));
+    const dayRecs = allRecords.filter(r=>recIso(r)===iso);
+    present7.push(dayRecs.filter(r=>r.status==="Present").length);
+    late7.push(dayRecs.filter(r=>r.status==="Late").length);
+    absent7.push(dayRecs.filter(r=>r.status==="Absent").length);
+  }
+
+  if(weeklyChartInstance) weeklyChartInstance.destroy();
+  weeklyChartInstance = new Chart(document.getElementById("weeklyChart"),{
+    type:"bar",
+    data:{labels:labels7,datasets:[
+      {label:"Present",data:present7,backgroundColor:"#2ecc71"},
+      {label:"Late",data:late7,backgroundColor:"#f39c12"},
+      {label:"Absent",data:absent7,backgroundColor:"#e74c3c"}
+    ]},
+    options:{responsive:true,plugins:{title:{display:true,text:"Last 7 Days"}}}
+  });
+
+  // Monthly: current month totals per teacher
+  const now = new Date();
+  const start = new Date(now.getFullYear(),now.getMonth(),1);
+  const monthEnd = new Date(now.getFullYear(),now.getMonth()+1,0);
+  const rows = buildReportRows(allRecords, isoDate(start), isoDate(monthEnd));
+
+  if(monthlyChartInstance) monthlyChartInstance.destroy();
+  monthlyChartInstance = new Chart(document.getElementById("monthlyChart"),{
+    type:"bar",
+    data:{labels:rows.map(r=>r.name),datasets:[
+      {label:"Present",data:rows.map(r=>r.present),backgroundColor:"#2ecc71"},
+      {label:"Late",data:rows.map(r=>r.late),backgroundColor:"#f39c12"},
+      {label:"Absent",data:rows.map(r=>r.absent),backgroundColor:"#e74c3c"}
+    ]},
+    options:{responsive:true,plugins:{title:{display:true,text:"This Month"}}}
+  });
+});
+
+// ==================== DARK MODE ====================
+
+function applyTheme(theme){
+  document.documentElement.setAttribute("data-theme",theme);
+  document.getElementById("btnTheme").textContent = theme==="dark" ? "☀️" : "🌙";
+  localStorage.setItem("theme",theme);
+}
+
+document.getElementById("btnTheme").addEventListener("click",()=>{
+  const current = document.documentElement.getAttribute("data-theme")==="dark" ? "dark" : "light";
+  applyTheme(current==="dark" ? "light" : "dark");
+});
+
+// ==================== PWA SERVICE WORKER ====================
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>{
+    navigator.serviceWorker.register("sw.js").catch(()=>{/* optional: works without it */});
+  });
+}
+
+// ==================== INIT ====================
+
+(async function init(){
+  applyTheme(localStorage.getItem("theme") || "light");
+  await loadSettings();
+  await loadHolidays();
+  const now = new Date();
+  document.getElementById("calMonth").value = `${now.getFullYear()}-${pad(now.getMonth()+1)}`;
+})();
+
+</script>
+
+</body>
+</html>
