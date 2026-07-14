@@ -561,6 +561,10 @@ async function loadSettings(){
       if(!Array.isArray(SETTINGS.teachers) || SETTINGS.teachers.length===0){
         SETTINGS.teachers = DEFAULT_SETTINGS.teachers;
       }
+      if(SETTINGS.lateTime==="17:50:00"){
+        SETTINGS.lateTime = "16:50:00";
+        await ref.set(SETTINGS);
+      }
     } else {
       SETTINGS = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
       await ref.set(SETTINGS);
@@ -761,7 +765,7 @@ document.getElementById("btnIn").addEventListener("click",()=>{
       const ref = db.collection("attendance").doc(id);
 
       let currentTime = nowTime();
-      const status = currentTime > SETTINGS.lateTime ? "Late" : "Present";
+      const status = currentTime >= SETTINGS.lateTime ? "Late" : "Present";
 
       try{
         await db.runTransaction(async(tx)=>{
@@ -968,6 +972,14 @@ window.openEdit = function(id){
   document.getElementById("editDistance").value = r.distance || "";
   document.getElementById("editModal").classList.add("show");
 };
+
+document.getElementById("editTime").addEventListener("input",()=>{
+  const t = document.getElementById("editTime").value;
+  if(!t) return;
+  const status = document.getElementById("editStatus");
+  if(status.value==="Absent") return; // don't override an explicit Absent
+  status.value = (t+":00") >= SETTINGS.lateTime ? "Late" : "Present";
+});
 
 document.getElementById("btnCancelEdit").addEventListener("click",()=>{
   document.getElementById("editModal").classList.remove("show");
