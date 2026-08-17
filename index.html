@@ -282,8 +282,8 @@ th{
 
 </style>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.16.0/firebase-app-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.16.0/firebase-firestore-compat.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 
 </head>
@@ -1192,16 +1192,30 @@ function buildReportRows(records, startIso, endIso){
   const start = new Date(startIso);
   const end = new Date(endIso);
   const today = new Date(isoDate());
-  const effectiveEnd = end < today ? end : today;
+  const effectiveEnd = end < today ? end : today; // never count a future date as a working day
 
-  let workingDays = 0;
+  // Every non-holiday date in the (clamped) range, tagged with its weekday code.
+  // Working-day eligibility is then decided per teacher below, using each teacher's own workingDays.
+  const nonHolidayDates = [];
   for(let d=new Date(start); d<=effectiveEnd; d.setDate(d.getDate()+1)){
     const iso = isoDate(d);
-    if(!holidayForDate(iso)) workingDays++;
+    if(holidayForDate(iso)) continue;
+    nonHolidayDates.push({iso, code:WEEKDAY_MAP[d.getDay()]});
   }
 
-  return teacherNames().map(name=>{
-    const recs = records.filter(r=>r.name===name && recIso(r)>=startIso && recIso(r)<=endIso);
+  return SETTINGS.teachers.map(t=>{
+    const name = t.name;
+    const teacherWD = Array.isArray(t.workingDays) ? t.workingDays : [];
+    const workingIsoSet = new Set(
+      nonHolidayDates.filter(d=>teacherWD.includes(d.code)).map(d=>d.iso)
+    );
+    const workingDays = workingIsoSet.size;
+
+    const recs = records.filter(r=>
+      r.name===name &&
+      recIso(r)>=startIso && recIso(r)<=endIso &&
+      workingIsoSet.has(recIso(r))
+    );
     const present = new Set(recs.filter(r=>r.status==="Present").map(r=>recIso(r))).size;
     const late = new Set(recs.filter(r=>r.status==="Late").map(r=>recIso(r))).size;
     const absent = new Set(recs.filter(r=>r.status==="Absent").map(r=>recIso(r))).size;
