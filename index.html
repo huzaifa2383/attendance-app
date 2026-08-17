@@ -436,6 +436,12 @@ th{
     <label>GPS Longitude</label>
     <input type="text" id="setLng">
 
+    <label>Attendance Period Start Date</label>
+    <input type="date" id="setAttendanceStartDate">
+    <div style="font-size:12px;color:var(--muted);margin:-8px 0 10px;">
+      Official reports (Weekly/Monthly/Custom/Graphs) never include dates before this. Older records remain visible in View.
+    </div>
+
     <h3>👥 Teacher Management</h3>
     <div id="teacherList"></div>
     <div style="text-align:center;">
@@ -510,6 +516,7 @@ const DEFAULT_SETTINGS = {
   lateTime:"16:50:00",
   lat:18.51278,
   lng:73.87936,
+  attendanceStartDate:"2026-08-17",
   teachers:[
     {name:"Shk Huzaifa bhai",pin:"1111",workingDays:["Mon","Tue","Wed","Thu","Fri"]},
     {name:"Shk Khuzaima bhai",pin:"2222",workingDays:["Thu","Fri"]},
@@ -605,6 +612,9 @@ async function loadSettings(){
           t.workingDays = DAY_OPTIONS.slice(0,6); // fallback: Mon-Sat, safe default until admin sets it
         }
       });
+      if(!SETTINGS.attendanceStartDate){
+        SETTINGS.attendanceStartDate = DEFAULT_SETTINGS.attendanceStartDate;
+      }
       if(SETTINGS.lateTime==="17:50:00"){
         SETTINGS.lateTime = "16:50:00";
         await ref.set(SETTINGS);
@@ -637,6 +647,7 @@ function populateSettingsForm(){
   document.getElementById("setLateTime").value = SETTINGS.lateTime.slice(0,5);
   document.getElementById("setLat").value = SETTINGS.lat;
   document.getElementById("setLng").value = SETTINGS.lng;
+  document.getElementById("setAttendanceStartDate").value = SETTINGS.attendanceStartDate;
   renderTeacherManagement();
 }
 
@@ -700,6 +711,8 @@ document.getElementById("btnSaveSettings").addEventListener("click",()=>{
   if(lt) SETTINGS.lateTime = lt+":00";
   SETTINGS.lat = parseFloat(document.getElementById("setLat").value) || SETTINGS.lat;
   SETTINGS.lng = parseFloat(document.getElementById("setLng").value) || SETTINGS.lng;
+  let asd = document.getElementById("setAttendanceStartDate").value; // YYYY-MM-DD
+  if(asd) SETTINGS.attendanceStartDate = asd;
   saveSettings();
 });
 
@@ -798,7 +811,8 @@ window.editHoliday = async function(id){
 // Runs whenever the admin opens the Dashboard or View page after SETTINGS.lateTime
 // (the same "Late Time Cutoff" set in Settings - keeping both in sync).
 // For every teacher scheduled to work today (per their workingDays) who has no
-// attendance record yet, and today isn't a holiday, create an Absent record.
+// attendance record yet, and today isn't a holiday, and today is on/after the
+// Attendance Period Start Date, create an Absent record.
 // Uses the same "attendance" collection and the same doc-id format (name_isoDate)
 // as manual check-in, and a transaction per teacher so it can never create duplicates.
 
@@ -810,6 +824,9 @@ async function runAutoAbsentCheck(){
     await loadHolidays();
     const todayIso = isoDate();
     if(holidayForDate(todayIso)) return; // holiday - skip everyone
+
+    const periodStartIso = SETTINGS.attendanceStartDate || DEFAULT_SETTINGS.attendanceStartDate;
+    if(todayIso < periodStartIso) return; // before the Attendance Period Start Date - do nothing
 
     const todayCode = WEEKDAY_MAP[new Date().getDay()];
     const scheduledToday = SETTINGS.teachers.filter(t=>
@@ -1189,15 +1206,21 @@ document.getElementById("btnCSV").addEventListener("click",()=>{
 // ==================== REPORTS ====================
 
 function buildReportRows(records, startIso, endIso){
-  const start = new Date(startIso);
-  const end = new Date(endIso);
-  const today = new Date(isoDate());
-  const effectiveEnd = end < today ? end : today; // never count a future date as a working day
+  const todayIso = isoDate();
+  const periodStartIso = SETTINGS.attendanceStartDate || DEFAULT_SETTINGS.attendanceStartDate;
+
+  // Clamp: never include a date before the Attendance Period Start Date,
+  // and never include a future date.
+  const effStartIso = startIso < periodStartIso ? periodStartIso : startIso;
+  const effEndIso = endIso < todayIso ? endIso : todayIso;
+
+  const start = new Date(effStartIso);
+  const end = new Date(effEndIso);
 
   // Every non-holiday date in the (clamped) range, tagged with its weekday code.
   // Working-day eligibility is then decided per teacher below, using each teacher's own workingDays.
   const nonHolidayDates = [];
-  for(let d=new Date(start); d<=effectiveEnd; d.setDate(d.getDate()+1)){
+  for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
     const iso = isoDate(d);
     if(holidayForDate(iso)) continue;
     nonHolidayDates.push({iso, code:WEEKDAY_MAP[d.getDay()]});
@@ -1213,7 +1236,7 @@ function buildReportRows(records, startIso, endIso){
 
     const recs = records.filter(r=>
       r.name===name &&
-      recIso(r)>=startIso && recIso(r)<=endIso &&
+      recIso(r)>=effStartIso && recIso(r)<=effEndIso &&
       workingIsoSet.has(recIso(r))
     );
     const present = new Set(recs.filter(r=>r.status==="Present").map(r=>recIso(r))).size;
