@@ -222,6 +222,27 @@ th{
 
 .teacher-row input{width:auto;flex:1;min-width:100px;}
 
+.workdays-row{
+  width:100%;
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:4px;
+  padding-top:4px;
+  border-top:1px dashed var(--border);
+}
+
+.daychip{
+  display:flex;
+  align-items:center;
+  gap:3px;
+  font-size:12px;
+  color:var(--muted);
+  margin:0;
+}
+
+.daychip input[type="checkbox"]{width:auto;margin:0;}
+
 .calendar-grid{
   display:grid;
   grid-template-columns:repeat(7,1fr);
@@ -454,6 +475,18 @@ th{
   </div>
 </div>
 
+<!-- AUTOMATIC ABSENT NOTIFICATION MODAL -->
+<div class="modal-overlay" id="autoAbsentModal">
+  <div class="modal-box">
+    <h3>Automatic Attendance Complete</h3>
+    <p id="autoAbsentSummary" style="text-align:center;font-weight:bold;margin:8px 0;"></p>
+    <ul id="autoAbsentList" style="margin:0 0 12px 20px;padding:0;font-size:14px;"></ul>
+    <div style="text-align:center;">
+      <button class="dark" id="btnCloseAutoAbsent">OK</button>
+    </div>
+  </div>
+</div>
+
 <script>
 
 // ==================== FIREBASE (unchanged project) ====================
@@ -478,16 +511,22 @@ const DEFAULT_SETTINGS = {
   lat:18.51278,
   lng:73.87936,
   teachers:[
-    {name:"Shk Huzaifa bhai",pin:"1111"},
-    {name:"Shk Khuzaima bhai",pin:"2222"},
-    {name:"Shk Taha bhai",pin:"3333"},
-    {name:"Mulla Mohammad bhai",pin:"4444"},
-    {name:"Farida ben",pin:"5555"},
-    {name:"Arwa ben",pin:"6666"},
-    {name:"Rashida ben",pin:"7777"},
-    {name:"UmmeSalama ben",pin:"8888"}
+    {name:"Shk Huzaifa bhai",pin:"1111",workingDays:["Mon","Tue","Wed","Thu","Fri"]},
+    {name:"Shk Khuzaima bhai",pin:"2222",workingDays:["Thu","Fri"]},
+    {name:"Shk Taha bhai",pin:"3333",workingDays:["Thu","Fri"]},
+    {name:"Mulla Mohammad bhai",pin:"4444",workingDays:["Mon","Tue","Wed","Thu","Fri"]},
+    {name:"Farida ben",pin:"5555",workingDays:["Mon","Tue","Wed","Thu","Fri"]},
+    {name:"Arwa ben",pin:"6666",workingDays:["Mon","Tue","Wed","Thu","Fri"]},
+    {name:"Rashida ben",pin:"7777",workingDays:["Mon","Tue","Wed"]},
+    {name:"M Tayyab bhai",pin:"9999",workingDays:["Mon","Tue","Wed"]}
   ]
 };
+
+// Days available for a teacher's working-day schedule (used in Settings > Teacher Management)
+const DAY_OPTIONS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+// JS Date.getDay() (0=Sun..6=Sat) -> 3-letter day code used in workingDays
+const WEEKDAY_MAP = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
 let SETTINGS = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
 let isAdmin = false;
@@ -561,6 +600,11 @@ async function loadSettings(){
       if(!Array.isArray(SETTINGS.teachers) || SETTINGS.teachers.length===0){
         SETTINGS.teachers = DEFAULT_SETTINGS.teachers;
       }
+      SETTINGS.teachers.forEach(t=>{
+        if(!Array.isArray(t.workingDays) || t.workingDays.length===0){
+          t.workingDays = DAY_OPTIONS.slice(0,6); // fallback: Mon-Sat, safe default until admin sets it
+        }
+      });
       if(SETTINGS.lateTime==="17:50:00"){
         SETTINGS.lateTime = "16:50:00";
         await ref.set(SETTINGS);
@@ -599,20 +643,41 @@ function populateSettingsForm(){
 function renderTeacherManagement(){
   let html = "";
   SETTINGS.teachers.forEach((t,i)=>{
+    const wd = Array.isArray(t.workingDays) ? t.workingDays : [];
     html += `
     <div class="teacher-row">
       <input type="text" value="${t.name}" data-idx="${i}" data-field="name">
       <input type="text" value="${t.pin}" data-idx="${i}" data-field="pin" placeholder="PIN">
       <button class="red" onclick="removeTeacher(${i})">Delete</button>
+      <div class="workdays-row">
+        ${DAY_OPTIONS.map(d=>`
+          <label class="daychip">
+            <input type="checkbox" data-idx="${i}" data-day="${d}" ${wd.includes(d) ? "checked" : ""}>
+            ${d}
+          </label>`).join("")}
+      </div>
     </div>`;
   });
   document.getElementById("teacherList").innerHTML = html;
 
-  document.querySelectorAll("#teacherList input").forEach(inp=>{
+  document.querySelectorAll("#teacherList input[type='text']").forEach(inp=>{
     inp.addEventListener("change",(e)=>{
       let idx = +e.target.dataset.idx;
       let field = e.target.dataset.field;
       SETTINGS.teachers[idx][field] = e.target.value.trim();
+    });
+  });
+
+  document.querySelectorAll("#teacherList input[type='checkbox']").forEach(cb=>{
+    cb.addEventListener("change",(e)=>{
+      let idx = +e.target.dataset.idx;
+      let day = e.target.dataset.day;
+      if(!Array.isArray(SETTINGS.teachers[idx].workingDays)) SETTINGS.teachers[idx].workingDays = [];
+      if(e.target.checked){
+        if(!SETTINGS.teachers[idx].workingDays.includes(day)) SETTINGS.teachers[idx].workingDays.push(day);
+      } else {
+        SETTINGS.teachers[idx].workingDays = SETTINGS.teachers[idx].workingDays.filter(d=>d!==day);
+      }
     });
   });
 }
@@ -624,7 +689,7 @@ window.removeTeacher = function(idx){
 };
 
 document.getElementById("btnAddTeacher").addEventListener("click",()=>{
-  SETTINGS.teachers.push({name:"New Teacher",pin:"0000"});
+  SETTINGS.teachers.push({name:"New Teacher",pin:"0000",workingDays:["Mon","Tue","Wed","Thu","Fri"]});
   renderTeacherManagement();
 });
 
@@ -729,6 +794,77 @@ window.editHoliday = async function(id){
   renderHolidays();
 };
 
+// ==================== AUTOMATIC ABSENT ====================
+// Runs whenever the admin opens the Dashboard or View page after SETTINGS.lateTime
+// (the same "Late Time Cutoff" set in Settings - keeping both in sync).
+// For every teacher scheduled to work today (per their workingDays) who has no
+// attendance record yet, and today isn't a holiday, create an Absent record.
+// Uses the same "attendance" collection and the same doc-id format (name_isoDate)
+// as manual check-in, and a transaction per teacher so it can never create duplicates.
+
+async function runAutoAbsentCheck(){
+  try{
+    const nowTimeStr = nowTime();
+    if(nowTimeStr < SETTINGS.lateTime) return; // too early, nothing to do yet
+
+    await loadHolidays();
+    const todayIso = isoDate();
+    if(holidayForDate(todayIso)) return; // holiday - skip everyone
+
+    const todayCode = WEEKDAY_MAP[new Date().getDay()];
+    const scheduledToday = SETTINGS.teachers.filter(t=>
+      Array.isArray(t.workingDays) && t.workingDays.includes(todayCode)
+    );
+
+    const markedAbsent = [];
+
+    for(const t of scheduledToday){
+      const id = attendanceId(t.name, todayIso);
+      const ref = db.collection("attendance").doc(id);
+      try{
+        let created = false;
+        await db.runTransaction(async(tx)=>{
+          const doc = await tx.get(ref);
+          if(doc.exists){ created = false; return; } // already has a record (checked in, late, or already absent) - do nothing
+          created = true;
+          tx.set(ref,{
+            name:t.name,
+            date:todayDisplay(),
+            in:"--",
+            status:"Absent",
+            distance:"--"
+          });
+        });
+        if(created) markedAbsent.push(t.name);
+      }catch(e){
+        console.error("Auto-absent check failed for",t.name,e);
+      }
+    }
+
+    if(markedAbsent.length>0) notifyAutoAbsentOncePerDay(todayIso, markedAbsent);
+  }catch(e){
+    console.error("Auto-absent check failed",e);
+  }
+}
+
+// Shows the "Automatic Attendance Complete" summary at most once per calendar day,
+// no matter how many times the auto-absent check runs that day.
+function notifyAutoAbsentOncePerDay(todayIso, names){
+  const NOTIFIED_KEY = "autoAbsentNotifiedDate";
+  if(localStorage.getItem(NOTIFIED_KEY) === todayIso) return; // already shown today
+
+  const summary = `${names.length} teacher${names.length===1?"":"s"} ${names.length===1?"was":"were"} marked Absent`;
+  document.getElementById("autoAbsentSummary").textContent = summary;
+  document.getElementById("autoAbsentList").innerHTML = names.map(n=>`<li>${n}</li>`).join("");
+  document.getElementById("autoAbsentModal").classList.add("show");
+
+  localStorage.setItem(NOTIFIED_KEY, todayIso);
+}
+
+document.getElementById("btnCloseAutoAbsent").addEventListener("click",()=>{
+  document.getElementById("autoAbsentModal").classList.remove("show");
+});
+
 // ==================== CHECK IN ====================
 
 document.getElementById("btnIn").addEventListener("click",()=>{
@@ -814,11 +950,19 @@ document.getElementById("btnAdminLogin").addEventListener("click",async()=>{
 // ==================== TABS ====================
 
 document.querySelectorAll(".tab-btn").forEach(btn=>{
-  btn.addEventListener("click",()=>{
+  btn.addEventListener("click",async()=>{
     document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
     document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
     btn.classList.add("active");
     document.getElementById(btn.dataset.tab).classList.add("active");
+
+    if(btn.dataset.tab==="tab-dashboard"){
+      await refreshDashboard();
+    } else if(btn.dataset.tab==="tab-view"){
+      await runAutoAbsentCheck();
+      await loadAllRecords();
+      renderTable();
+    }
   });
 });
 
@@ -829,8 +973,9 @@ async function loadAllRecords(){
   allRecords = [];
   snap.forEach(doc=>allRecords.push({id:doc.id,...doc.data()}));
   allRecords.sort((a,b)=>{
-    let d1 = new Date(a.date+" "+(a.in!=="-"&&a.in?a.in:"00:00:00"));
-    let d2 = new Date(b.date+" "+(b.in!=="-"&&b.in?b.in:"00:00:00"));
+    const noTime = (v)=> !v || v==="-" || v==="--";
+    let d1 = new Date(a.date+" "+(noTime(a.in) ? "00:00:00" : a.in));
+    let d2 = new Date(b.date+" "+(noTime(b.in) ? "00:00:00" : b.in));
     return d2-d1;
   });
   return allRecords;
@@ -839,6 +984,7 @@ async function loadAllRecords(){
 // ==================== DASHBOARD ====================
 
 async function refreshDashboard(){
+  await runAutoAbsentCheck();
   await loadAllRecords();
   const todayStr = todayDisplay();
   const todays = allRecords.filter(r=>r.date===todayStr);
@@ -898,6 +1044,7 @@ document.getElementById("searchName").addEventListener("input",renderTable);
 document.getElementById("filterStatus").addEventListener("change",renderTable);
 
 document.getElementById("btnLoadRecords").addEventListener("click",async()=>{
+  await runAutoAbsentCheck();
   await loadAllRecords();
   renderTable();
 });
@@ -967,7 +1114,7 @@ window.openEdit = function(id){
   editingId = id;
   document.getElementById("editName").value = r.name;
   document.getElementById("editDate").value = recIso(r);
-  document.getElementById("editTime").value = (r.in && r.in!=="-") ? r.in.slice(0,5) : "";
+  document.getElementById("editTime").value = (r.in && r.in!=="-" && r.in!=="--") ? r.in.slice(0,5) : "";
   document.getElementById("editStatus").value = r.status;
   document.getElementById("editDistance").value = r.distance || "";
   document.getElementById("editModal").classList.add("show");
