@@ -430,6 +430,9 @@ th{
     <label>Late Time Cutoff (after this time = Late)</label>
     <input type="time" id="setLateTime" step="1">
 
+    <label>Automatic Absent Time (Absent check runs after this time)</label>
+    <input type="time" id="setAutoAbsentTime" step="1">
+
     <label>GPS Latitude</label>
     <input type="text" id="setLat">
 
@@ -513,7 +516,8 @@ const db = firebase.firestore();
 const DEFAULT_SETTINGS = {
   adminPin:"1234",
   radius:100,
-  lateTime:"16:50:00",
+  lateTime:"17:50:00",
+  autoAbsentTime:"18:15:00",
   lat:18.51278,
   lng:73.87936,
   attendanceStartDate:"2026-08-17",
@@ -554,6 +558,16 @@ function todayDisplay(){
 
 function nowTime(){
   return new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+// Formats a "HH:MM:SS" 24-hour string as a 12-hour "h:mm AM/PM" string, e.g. "18:15:00" -> "6:15 PM"
+function formatTime12(hhmmss){
+  const parts = hhmmss.split(":");
+  let h = parseInt(parts[0],10);
+  const m = parts[1];
+  const ampm = h>=12 ? "PM" : "AM";
+  h = h%12; if(h===0) h=12;
+  return h+":"+m+" "+ampm;
 }
 
 function recIso(record){
@@ -615,9 +629,8 @@ async function loadSettings(){
       if(!SETTINGS.attendanceStartDate){
         SETTINGS.attendanceStartDate = DEFAULT_SETTINGS.attendanceStartDate;
       }
-      if(SETTINGS.lateTime==="17:50:00"){
-        SETTINGS.lateTime = "16:50:00";
-        await ref.set(SETTINGS);
+      if(!SETTINGS.autoAbsentTime){
+        SETTINGS.autoAbsentTime = DEFAULT_SETTINGS.autoAbsentTime;
       }
     } else {
       SETTINGS = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
@@ -645,6 +658,7 @@ function populateSettingsForm(){
   document.getElementById("setAdminPin").value = SETTINGS.adminPin;
   document.getElementById("setRadius").value = SETTINGS.radius;
   document.getElementById("setLateTime").value = SETTINGS.lateTime.slice(0,5);
+  document.getElementById("setAutoAbsentTime").value = SETTINGS.autoAbsentTime.slice(0,5);
   document.getElementById("setLat").value = SETTINGS.lat;
   document.getElementById("setLng").value = SETTINGS.lng;
   document.getElementById("setAttendanceStartDate").value = SETTINGS.attendanceStartDate;
@@ -709,6 +723,8 @@ document.getElementById("btnSaveSettings").addEventListener("click",()=>{
   SETTINGS.radius = parseInt(document.getElementById("setRadius").value) || SETTINGS.radius;
   let lt = document.getElementById("setLateTime").value; // HH:MM
   if(lt) SETTINGS.lateTime = lt+":00";
+  let aat = document.getElementById("setAutoAbsentTime").value; // HH:MM
+  if(aat) SETTINGS.autoAbsentTime = aat+":00";
   SETTINGS.lat = parseFloat(document.getElementById("setLat").value) || SETTINGS.lat;
   SETTINGS.lng = parseFloat(document.getElementById("setLng").value) || SETTINGS.lng;
   let asd = document.getElementById("setAttendanceStartDate").value; // YYYY-MM-DD
@@ -808,8 +824,9 @@ window.editHoliday = async function(id){
 };
 
 // ==================== AUTOMATIC ABSENT ====================
-// Runs whenever the admin opens the Dashboard or View page after SETTINGS.lateTime
-// (the same "Late Time Cutoff" set in Settings - keeping both in sync).
+// Runs whenever the admin opens the Dashboard or View page after SETTINGS.autoAbsentTime
+// (a separate setting from the Late Time Cutoff - check-in remains open and can still
+// be marked Late right up until this time).
 // For every teacher scheduled to work today (per their workingDays) who has no
 // attendance record yet, and today isn't a holiday, and today is on/after the
 // Attendance Period Start Date, create an Absent record.
@@ -819,7 +836,7 @@ window.editHoliday = async function(id){
 async function runAutoAbsentCheck(){
   try{
     const nowTimeStr = nowTime();
-    if(nowTimeStr < SETTINGS.lateTime) return; // too early, nothing to do yet
+    if(nowTimeStr < SETTINGS.autoAbsentTime) return; // too early, nothing to do yet
 
     await loadHolidays();
     const todayIso = isoDate();
@@ -894,6 +911,13 @@ document.getElementById("btnIn").addEventListener("click",()=>{
     return;
   }
 
+  // Hard check-in cutoff: attendance closes at SETTINGS.autoAbsentTime.
+  // If the admin changes Automatic Absent Time in Settings, this cutoff follows automatically.
+  if(nowTime() >= SETTINGS.autoAbsentTime){
+    show("Attendance is closed. Check-in ended at "+formatTime12(SETTINGS.autoAbsentTime)+".","error");
+    return;
+  }
+
   const btn = document.getElementById("btnIn");
   btn.disabled = true;
 
@@ -914,10 +938,18 @@ document.getElementById("btnIn").addEventListener("click",()=>{
         return;
       }
 
+      let currentTime = nowTime();
+
+      // Re-check the cutoff right before writing, in case the GPS lookup above took
+      // long enough to cross SETTINGS.autoAbsentTime while this request was in flight.
+      if(currentTime >= SETTINGS.autoAbsentTime){
+        show("Attendance is closed. Check-in ended at "+formatTime12(SETTINGS.autoAbsentTime)+".","error");
+        return;
+      }
+
       const id = attendanceId(name,todayIso);
       const ref = db.collection("attendance").doc(id);
 
-      let currentTime = nowTime();
       const status = currentTime >= SETTINGS.lateTime ? "Late" : "Present";
 
       try{
